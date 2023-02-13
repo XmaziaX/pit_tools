@@ -238,51 +238,54 @@ class DaneAdresowe(QgsProcessingAlgorithm):
                 pass
         # punkty_laczenia_kabla
         layer_wezly = layer_by_part_of_name('punkty_laczenia_kabla')
-        wezly = list(layer_wezly.getFeatures())
-        for feature in wezly:
-            if feature.geometry().isEmpty():
-                miasto = feature['city_name']
-                ulica = feature['street_name']
-                numer = feature['house_no']
-                kod = feature['postal_code']
-                id = feature['id']
-                if numer is False or numer == '0':
-                    pass
-                else:
-                    if ulica == 'BRAK ULICY' or ulica is False:
-                        zap = 'https://services.gugik.gov.pl/uug/?request=GetAddress&address=' + miasto + ',%20' + numer
-                    else:
-                        zap = 'https://services.gugik.gov.pl/uug/?request=GetAddress&address=' + miasto + ',%20' + ulica + '%20' + numer
-                r = requests.get(zap, headers=headers)
-                results_dict = r.json()
-                if results_dict['results'] is None:
-                    pass
-                else:
-                    if results_dict['returned objects'] == 1:
-                        nr_adress = '1'
-                    else:
-                        for k, v in results_dict['results'].items():
-                            if v['code'] == kod:
-                                nr_adress = v['id']
-                                break
-                            else:
-                                nr_adress = '0'
-                    if int(nr_adress) >= 1:
-                        wkt = results_dict['results'][str(nr_adress)]['geometry_wkt']
-                        geom = QgsGeometry.fromWkt(wkt)
-                        layer_wezly.dataProvider().changeGeometryValues({feature.id(): geom})
-                        geom.transform(tr)
-                        x = geom.get().x()
-                        y = geom.get().y()
-                        attrs = {12: f'{y:.5f}', 13: f'{x:.5f}', 17: f'1'}
-                        layer_wezly.dataProvider().changeAttributeValues({feature.id(): attrs})
-                        layer_wezly.commitChanges()
-                        feedback.setProgress(int(current * total))
-                    # # time.sleep(1)
-                    else:
+        if wezly is None:
+            pass
+        else:
+            wezly = list(layer_wezly.getFeatures())
+            for feature in wezly:
+                if feature.geometry().isEmpty():
+                    miasto = feature['city_name']
+                    ulica = feature['street_name']
+                    numer = feature['house_no']
+                    kod = feature['postal_code']
+                    id = feature['id']
+                    if numer is False or numer == '0':
                         pass
-            else:
-                pass
+                    else:
+                        if ulica == 'BRAK ULICY' or ulica is False:
+                            zap = 'https://services.gugik.gov.pl/uug/?request=GetAddress&address=' + miasto + ',%20' + numer
+                        else:
+                            zap = 'https://services.gugik.gov.pl/uug/?request=GetAddress&address=' + miasto + ',%20' + ulica + '%20' + numer
+                    r = requests.get(zap, headers=headers)
+                    results_dict = r.json()
+                    if results_dict['results'] is None:
+                        pass
+                    else:
+                        if results_dict['returned objects'] == 1:
+                            nr_adress = '1'
+                        else:
+                            for k, v in results_dict['results'].items():
+                                if v['code'] == kod:
+                                    nr_adress = v['id']
+                                    break
+                                else:
+                                    nr_adress = '0'
+                        if int(nr_adress) >= 1:
+                            wkt = results_dict['results'][str(nr_adress)]['geometry_wkt']
+                            geom = QgsGeometry.fromWkt(wkt)
+                            layer_wezly.dataProvider().changeGeometryValues({feature.id(): geom})
+                            geom.transform(tr)
+                            x = geom.get().x()
+                            y = geom.get().y()
+                            attrs = {12: f'{y:.5f}', 13: f'{x:.5f}', 17: f'1'}
+                            layer_wezly.dataProvider().changeAttributeValues({feature.id(): attrs})
+                            layer_wezly.commitChanges()
+                            feedback.setProgress(int(current * total))
+                        # # time.sleep(1)
+                        else:
+                            pass
+                else:
+                    pass
         QgsMessageLog.logMessage(f'GOTOWE')
         return {}
 
@@ -329,6 +332,10 @@ class DaneAdresowe(QgsProcessingAlgorithm):
              
              PARAMETRY
              Brak - zaczytują się automatycznie.
+             
+             UWAGA!
+             Jeżeli w projekcie nie ma warstwy punkty_laczenia_kabla - zduplikuj wezły_obce, usuń dane zapisz i odpal algorytm.
+             Powinno zadziałać.
              
              Pomijane są adresy bez numerów  lub z numerami równymi 0.
              Aktualizowana jest geometria.
