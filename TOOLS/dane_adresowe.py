@@ -66,6 +66,7 @@ class DaneAdresowe(QgsProcessingAlgorithm):
     INPUT_WEZLY = 'INPUT_WEZLY'
     INPUT_WEZLY_OBCE = 'INPUT_WEZLY_OBCE'
     INPUT_PUNKTY_LACZENIA = 'INPUT_PUNKTY_LACZENIA'
+    INPUT_PUNKTY_ZAKONCZENIA = 'INPUT_PUNKTY_ZAKONCZENIA'
 
     def initAlgorithm(self, config):
         """
@@ -99,6 +100,13 @@ class DaneAdresowe(QgsProcessingAlgorithm):
             )
             )
 
+        self.addParameter(
+            QgsProcessingParameterFeatureSource(
+                self.INPUT_PUNKTY_ZAKONCZENIA,
+                self.tr('Warstwa  zakonczenia_sieci [punktowa]'),
+                [QgsProcessing.TypeVectorPoint], defaultValue=layer_by_part_of_name('zakonczenia_sieci')
+            )
+            )
 
     def processAlgorithm(self, parameters, context, feedback):
         """
@@ -112,7 +120,7 @@ class DaneAdresowe(QgsProcessingAlgorithm):
         def _zlicz_obiekty_z_pusta_geom(layer: QgsVectorLayer)->int:
             ile_pustych = 0
             for x in layer.getFeatures():
-                if x.geometry().isEmpty():
+                if x['flag'] == '0':
                     ile_pustych += 1
                 else:
                     pass
@@ -121,8 +129,16 @@ class DaneAdresowe(QgsProcessingAlgorithm):
         source_pkt_ww = self.parameterAsSource(parameters, self.INPUT_WEZLY, context)
         source_pkt_wo = self.parameterAsSource(parameters, self.INPUT_WEZLY_OBCE, context)
         source_pkt_lk = self.parameterAsSource(parameters, self.INPUT_PUNKTY_LACZENIA, context)
-        suma_ob = _zlicz_obiekty_z_pusta_geom(source_pkt_ww) + _zlicz_obiekty_z_pusta_geom(source_pkt_wo) + _zlicz_obiekty_z_pusta_geom(source_pkt_lk)
+        source_pkt_zak = self.parameterAsSource(parameters, self.INPUT_PUNKTY_ZAKONCZENIA, context)
+        suma_ob = _zlicz_obiekty_z_pusta_geom(source_pkt_ww) + _zlicz_obiekty_z_pusta_geom(source_pkt_wo) + \
+                  _zlicz_obiekty_z_pusta_geom(source_pkt_lk) + _zlicz_obiekty_z_pusta_geom(source_pkt_zak)
         QgsMessageLog.logMessage(f'suma_obiektow so geokodowania:  {suma_ob}')
+        if suma_ob >= 250:
+            suma_ob = 250
+        else:
+            pass
+        QgsMessageLog.logMessage(f'Przetważam pierwsze {suma_ob}  ')
+
 
         # Compute the number of steps to display within the progress bar and
         # get features from source
@@ -132,16 +148,21 @@ class DaneAdresowe(QgsProcessingAlgorithm):
         for feature in obiekty:
             # Stop the algorithm if cancel button has been clicked
             if feedback.isCanceled():
-                break
+                continue
 
         sourceCrs = QgsCoordinateReferenceSystem(2180)
         destCrs = QgsCoordinateReferenceSystem(4326)
         tran = QgsCoordinateTransform(sourceCrs, destCrs, QgsProject.instance())
 
         # wezly
+        QgsMessageLog.logMessage(f'Rozpoczynam geokodowanie węzłów')
         layer_wezly = layer_by_part_of_name('wezly')
         wezly = list(layer_wezly.getFeatures())
         for feature in wezly:
+            if current < 250:
+                pass
+            else:
+                continue
             if feature.geometry().isEmpty():
                 miasto = feature['city_name']
                 ulica = feature['street_name']
@@ -158,7 +179,11 @@ class DaneAdresowe(QgsProcessingAlgorithm):
                 r = requests.get(zap, headers=headers)
                 results_dict = r.json()
                 if results_dict['results'] is None:
-                    pass
+                    attrs = {23: f'2'}
+                    layer_wezly.dataProvider().changeAttributeValues({feature.id(): attrs})
+                    current += 1
+                    layer_wezly.commitChanges()
+                    feedback.setProgress(int(current * total))
                 else:
                     if results_dict['returned objects'] == 1:
                         nr_adress = '1'
@@ -181,16 +206,20 @@ class DaneAdresowe(QgsProcessingAlgorithm):
                         current += 1
                         layer_wezly.commitChanges()
                         feedback.setProgress(int(current * total))
-                    # # time.sleep(1)
+                        time.sleep(1)
                     else:
                         pass
             else:
                 pass
-
+        QgsMessageLog.logMessage(f'Rozpoczynam geokodowanie węzłów obcych')
         # wezly_obce
         layer_wezly = layer_by_part_of_name('wezly_obce')
         wezly = list(layer_wezly.getFeatures())
         for feature in wezly:
+            if current < 250:
+                pass
+            else:
+                continue
             if feature.geometry().isEmpty():
                 miasto = feature['city_name']
                 ulica = feature['street_name']
@@ -198,7 +227,11 @@ class DaneAdresowe(QgsProcessingAlgorithm):
                 kod = feature['postal_code']
                 id = feature['id']
                 if numer is False or numer == '0':
-                    pass
+                    attrs = {18: f'2'}
+                    layer_wezly.dataProvider().changeAttributeValues({feature.id(): attrs})
+                    current += 1
+                    layer_wezly.commitChanges()
+                    feedback.setProgress(int(current * total))
                 else:
                     if ulica == 'BRAK ULICY' or ulica is False:
                         zap = 'https://services.gugik.gov.pl/uug/?request=GetAddress&address=' + miasto + ',%20' + numer
@@ -222,14 +255,16 @@ class DaneAdresowe(QgsProcessingAlgorithm):
                         wkt = results_dict['results'][str(nr_adress)]['geometry_wkt']
                         geom = QgsGeometry.fromWkt(wkt)
                         layer_wezly.dataProvider().changeGeometryValues({feature.id(): geom})
+                        current += 1
                         geom.transform(tran)
                         x = geom.get().x()
                         y = geom.get().y()
                         attrs = {14: f'{y:.5f}', 15: f'{x:.5f}', 18: f'1'}
                         layer_wezly.dataProvider().changeAttributeValues({feature.id(): attrs})
+                        current += 1
                         layer_wezly.commitChanges()
                         feedback.setProgress(int(current * total))
-                    # time.sleep(1)
+                        time.sleep(1)
                     else:
                         pass
 
@@ -237,12 +272,17 @@ class DaneAdresowe(QgsProcessingAlgorithm):
 
                 pass
         # punkty_laczenia_kabla
+        QgsMessageLog.logMessage(f'Rozpoczynam geokodowanie  punkty_laczenia_kabla')
         layer_wezly = layer_by_part_of_name('punkty_laczenia_kabla')
-        if wezly is None:
+        if layer_wezly is None:
             pass
         else:
             wezly = list(layer_wezly.getFeatures())
             for feature in wezly:
+                if current < 250:
+                    pass
+                else:
+                    continue
                 if feature.geometry().isEmpty():
                     miasto = feature['city_name']
                     ulica = feature['street_name']
@@ -250,7 +290,11 @@ class DaneAdresowe(QgsProcessingAlgorithm):
                     kod = feature['postal_code']
                     id = feature['id']
                     if numer is False or numer == '0':
-                        pass
+                        attrs = {17: f'2'}
+                        layer_wezly.dataProvider().changeAttributeValues({feature.id(): attrs})
+                        current += 1
+                        layer_wezly.commitChanges()
+                        feedback.setProgress(int(current * total))
                     else:
                         if ulica == 'BRAK ULICY' or ulica is False:
                             zap = 'https://services.gugik.gov.pl/uug/?request=GetAddress&address=' + miasto + ',%20' + numer
@@ -279,13 +323,77 @@ class DaneAdresowe(QgsProcessingAlgorithm):
                             y = geom.get().y()
                             attrs = {12: f'{y:.5f}', 13: f'{x:.5f}', 17: f'1'}
                             layer_wezly.dataProvider().changeAttributeValues({feature.id(): attrs})
+                            current += 1
                             layer_wezly.commitChanges()
                             feedback.setProgress(int(current * total))
-                        # # time.sleep(1)
+                            time.sleep(1)
                         else:
                             pass
                 else:
                     pass
+
+        # zakonczenia_sieci
+        QgsMessageLog.logMessage(f'Rozpoczynam geokodowanie  zakonczenia_sieci')
+        layer_wezly = layer_by_part_of_name('zakonczenia_sieci')
+        if wezly is None:
+            pass
+        else:
+            wezly = list(layer_wezly.getFeatures())
+            for feature in wezly:
+                if current < 250:
+                    pass
+                else:
+                    continue
+                if feature.geometry().isEmpty():
+                    miasto = feature['city_name']
+                    ulica = feature['street_name']
+                    numer = feature['house_no']
+                    kod = feature['postal_code']
+                    id = feature['id']
+                    if numer is False or numer == '0':
+                        attrs = {31: f'2'}
+                        layer_wezly.dataProvider().changeAttributeValues({feature.id(): attrs})
+                        current += 1
+                        layer_wezly.commitChanges()
+                        feedback.setProgress(int(current * total))
+                    else:
+                        if ulica == 'BRAK ULICY' or ulica is False:
+                            zap = 'https://services.gugik.gov.pl/uug/?request=GetAddress&address=' + miasto + ',%20' + numer
+                        else:
+                            zap = 'https://services.gugik.gov.pl/uug/?request=GetAddress&address=' + miasto + ',%20' + ulica + '%20' + numer
+                    r = requests.get(zap, headers=headers)
+                    results_dict = r.json()
+                    if results_dict['results'] is None:
+                        pass
+                    else:
+                        if results_dict['returned objects'] == 1:
+                            nr_adress = '1'
+                        else:
+                            for k, v in results_dict['results'].items():
+                                if v['code'] == kod:
+                                    nr_adress = v['id']
+                                    break
+                                else:
+                                    nr_adress = '0'
+                        if int(nr_adress) >= 1:
+                            wkt = results_dict['results'][str(nr_adress)]['geometry_wkt']
+                            geom = QgsGeometry.fromWkt(wkt)
+                            layer_wezly.dataProvider().changeGeometryValues({feature.id(): geom})
+                            geom.transform(tran)
+                            x = geom.get().x()
+                            y = geom.get().y()
+                            attrs = {16: f'{y:.5f}', 17: f'{x:.5f}', 31: f'1'}
+                            layer_wezly.dataProvider().changeAttributeValues({feature.id(): attrs})
+                            current += 1
+                            layer_wezly.commitChanges()
+                            feedback.setProgress(int(current * total))
+                            time.sleep(1)
+                        else:
+                            pass
+                else:
+                    pass
+
+
         QgsMessageLog.logMessage(f'GOTOWE')
         return {}
 
@@ -333,10 +441,16 @@ class DaneAdresowe(QgsProcessingAlgorithm):
              PARAMETRY
              Brak - zaczytują się automatycznie.
              
+             Geokodowane są 4 warstwy, jeden "obieg" algorytmu geokoduje 250 obiektów w kolejności listy warstwy w 
+             oknie algorytmu. Pomiędzy każdym zapytaniem o adres czekam 1 s.
+             
+             Jeżeli nie potrzebujesz geokodować zakonczenia_sieci - nie wykonuj algorytmu wiekszą ilość razy.
+             
              Pomijane są adresy bez numerów  lub z numerami równymi 0.
              Aktualizowana jest geometria.
              Wpisywane są  dł/szer w ukłądzie WGS84.
-             Uzupełnione elementy otrzymują  wartość w atrybucie flag = 1 (inne domyślnie mają tam 0.
+             Uzupełnione elementy otrzymują  wartość w atrybucie flag = 1 (inne domyślnie mają tam 0)
+             Obiekty z 0, które nie zostały zgeokodowane otrzymują flag = 2
              
              NIE MODYFIKOWAŁEM KODÓW TERC SIMC ULIC (pominąłem, ale to można łatwo dodać)
              Uzupełniane są warstwy: wezły (WW), wezly_obce (WO)   , punkty_laczenia_kabla (PL)             
