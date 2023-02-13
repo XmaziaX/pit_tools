@@ -333,10 +333,6 @@ class DaneAdresowe(QgsProcessingAlgorithm):
              PARAMETRY
              Brak - zaczytują się automatycznie.
              
-             UWAGA!
-             Jeżeli w projekcie nie ma warstwy punkty_laczenia_kabla - zduplikuj wezły_obce, usuń dane zapisz i odpal algorytm.
-             Powinno zadziałać.
-             
              Pomijane są adresy bez numerów  lub z numerami równymi 0.
              Aktualizowana jest geometria.
              Wpisywane są  dł/szer w ukłądzie WGS84.

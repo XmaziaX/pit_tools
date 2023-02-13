@@ -6,7 +6,7 @@
 name=PIT Tools
 qgisMinimumVersion=3.22
 description=Plugin ułątwiający pracę z danymi UEK PIT.
-version=0.1.2
+version=0.1.3
 author=Tomasz Mazuga
 email=tmazuga@gmail.com
 

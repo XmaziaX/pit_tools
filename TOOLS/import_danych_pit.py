@@ -371,7 +371,7 @@ class ImportDanych(QgsProcessingAlgorithm):
         ]
 
         for war in warstwy:
-            if war[3] > 0:
+            if war[3] >= 0:
                 # print(war[4], war[0], "memory")
                 layer = QgsVectorLayer(war[4], war[0], "memory")
                 crs = QgsCoordinateReferenceSystem(crs_layer)
@@ -385,13 +385,13 @@ class ImportDanych(QgsProcessingAlgorithm):
 
         # dodawanie obiektow do warstw
         for war in warstwy:
-            if war[3] > 0:
+            if war[3] >= 0:
                 layer = war[2]
                 (res, outFeats) = layer.dataProvider().addFeatures(war[1])
             else:
                 pass
         for war in warstwy:
-            if war[3] > 0:
+            if war[3] >= 0:
                 QgsProject.instance().addMapLayer(war[2])
 
         layer_ww = layer_by_part_of_name('wezly')
