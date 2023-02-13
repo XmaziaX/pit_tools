@@ -136,7 +136,7 @@ class DaneAdresowe(QgsProcessingAlgorithm):
 
         sourceCrs = QgsCoordinateReferenceSystem(2180)
         destCrs = QgsCoordinateReferenceSystem(4326)
-        tr = QgsCoordinateTransform(sourceCrs, destCrs, QgsProject.instance())
+        tran = QgsCoordinateTransform(sourceCrs, destCrs, QgsProject.instance())
 
         # wezly
         layer_wezly = layer_by_part_of_name('wezly')
@@ -173,7 +173,7 @@ class DaneAdresowe(QgsProcessingAlgorithm):
                         wkt = results_dict['results'][str(nr_adress)]['geometry_wkt']
                         geom = QgsGeometry.fromWkt(wkt)
                         layer_wezly.dataProvider().changeGeometryValues({feature.id(): geom})
-                        geom.transform(tr)
+                        geom.transform(tran)
                         x = geom.get().x()
                         y = geom.get().y()
                         attrs = {15: f'{y:.5f}', 16: f'{x:.5f}', 23: f'1'}
@@ -222,7 +222,7 @@ class DaneAdresowe(QgsProcessingAlgorithm):
                         wkt = results_dict['results'][str(nr_adress)]['geometry_wkt']
                         geom = QgsGeometry.fromWkt(wkt)
                         layer_wezly.dataProvider().changeGeometryValues({feature.id(): geom})
-                        geom.transform(tr)
+                        geom.transform(tran)
                         x = geom.get().x()
                         y = geom.get().y()
                         attrs = {14: f'{y:.5f}', 15: f'{x:.5f}', 18: f'1'}
@@ -274,7 +274,7 @@ class DaneAdresowe(QgsProcessingAlgorithm):
                             wkt = results_dict['results'][str(nr_adress)]['geometry_wkt']
                             geom = QgsGeometry.fromWkt(wkt)
                             layer_wezly.dataProvider().changeGeometryValues({feature.id(): geom})
-                            geom.transform(tr)
+                            geom.transform(tran)
                             x = geom.get().x()
                             y = geom.get().y()
                             attrs = {12: f'{y:.5f}', 13: f'{x:.5f}', 17: f'1'}
