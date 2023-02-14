@@ -31,12 +31,13 @@ def create_layer_fields(type: str) -> QgsFields:
     return layer_name_fields
 
 
-def create_folder(path: str) -> None:
+def create_folder(path: str) -> bool:
     """ Funkcja tworząca folder o ile nie istnieje"""
     if not os.path.exists(path):
         os.makedirs(path)
     else:
         pass
+    return True
 
 
 def create_object(row: list, type: list, layer_fields: QgsFields) -> QgsFeature:
