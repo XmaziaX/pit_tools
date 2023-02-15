@@ -68,6 +68,7 @@ class ImportDanych(QgsProcessingAlgorithm):
     INPUT_CSV = 'INPUT_CSV'
     CRS = 'CRS'
     FOLDER_PATH = 'FOLDER_PATH'
+    CRS_OLD = 'CRS_OLD'
 
     def initAlgorithm(self, config):
         """
@@ -91,8 +92,14 @@ class ImportDanych(QgsProcessingAlgorithm):
 
         self.addParameter(
             QgsProcessingParameterCrs(
+                name=self.CRS_OLD,
+                description=self.tr('Wybierz odwzorowanie PIERWOTNE (domyślnie układ WGS84 EPSG:4326)'), defaultValue='EPSG:4326'
+            ))
+
+        self.addParameter(
+            QgsProcessingParameterCrs(
                 name=self.CRS,
-                description=self.tr('Wybierz odwzorowanie (domyślnie układ 1992 EPSG:2180)'), defaultValue='EPSG:2180'
+                description=self.tr('Wybierz odwzorowanie DOCELOWE (domyślnie układ WGS84 EPSG:4326)'), defaultValue='EPSG:4326'
             ))
 
 
@@ -106,6 +113,11 @@ class ImportDanych(QgsProcessingAlgorithm):
             self.CRS,
             context)
 
+        crs_layer_old = self.parameterAsCrs(
+            parameters,
+            self.CRS_OLD,
+            context)
+
         gpkg_path = self.parameterAsFile(
             parameters,
             self.FOLDER_PATH,
@@ -117,7 +129,7 @@ class ImportDanych(QgsProcessingAlgorithm):
             context)
 
         QgsProject.instance().setCrs(crs_layer)
-        gpkg_path = os.path.join( gpkg_path, (os.path.basename(file_csv_path).replace('csv', 'gpkg')))
+        gpkg_path = os.path.join(gpkg_path, (os.path.basename(file_csv_path).replace('csv', 'gpkg')))
 
 
         # tworzenie seq
@@ -212,9 +224,9 @@ class ImportDanych(QgsProcessingAlgorithm):
 
 
         # przygotowanie konwersji 4326 -> 2180
-        # sourceCrs = QgsCoordinateReferenceSystem(4326)
-        # destCrs = QgsCoordinateReferenceSystem(2180)
-        # tran = QgsCoordinateTransform(sourceCrs, destCrs, QgsProject.instance())
+        sourceCrs = QgsCoordinateReferenceSystem(crs_layer_old)
+        destCrs = QgsCoordinateReferenceSystem(crs_layer)
+        tran = QgsCoordinateTransform(sourceCrs, destCrs, QgsProject.instance())
 
         with open(file_csv_path, newline='\n') as csvfile:
             lines = csv.reader(csvfile, delimiter=',', quotechar='"')
@@ -247,9 +259,9 @@ class ImportDanych(QgsProcessingAlgorithm):
                     else:
                         geom = QgsGeometry(QgsPoint(float(feat['we09_dlugosc']), float(feat['we08_szerokosc'])))
                         # bez dublowania def tran - z poziomu algorytmu nie konwertowaly sie dane
-                        sourceCrs = QgsCoordinateReferenceSystem(4326)
-                        destCrs = QgsCoordinateReferenceSystem(2180)
-                        tran = QgsCoordinateTransform(sourceCrs, destCrs, QgsProject.instance())
+                        # sourceCrs = QgsCoordinateReferenceSystem(4326)
+                        # destCrs = QgsCoordinateReferenceSystem(2180)
+                        # tran = QgsCoordinateTransform(sourceCrs, destCrs, QgsProject.instance())
                         geom.transform(tran)
                         feat.setGeometry(geom)
                     feat_ww.append(feat)
@@ -263,9 +275,9 @@ class ImportDanych(QgsProcessingAlgorithm):
                     else:
                         geom = QgsGeometry(QgsPoint(float(feat['longitude']), float(feat['latitude'])))
                         # bez dublowania def tran - z poziomu algorytmu nie konwertowaly sie dane
-                        sourceCrs = QgsCoordinateReferenceSystem(4326)
-                        destCrs = QgsCoordinateReferenceSystem(2180)
-                        tran = QgsCoordinateTransform(sourceCrs, destCrs, QgsProject.instance())
+                        # sourceCrs = QgsCoordinateReferenceSystem(4326)
+                        # destCrs = QgsCoordinateReferenceSystem(2180)
+                        # tran = QgsCoordinateTransform(sourceCrs, destCrs, QgsProject.instance())
                         geom.transform(tran)
                         feat.setGeometry(geom)
                     feat_wo.append(feat)
@@ -309,9 +321,9 @@ class ImportDanych(QgsProcessingAlgorithm):
                     else:
                         geom = (QgsGeometry(QgsPoint(float(feat['longitude']), float(feat['latitude']))))
                         # bez dublowania def tran - z poziomu algorytmu nie konwertowaly sie dane
-                        sourceCrs = QgsCoordinateReferenceSystem(4326)
-                        destCrs = QgsCoordinateReferenceSystem(2180)
-                        tran = QgsCoordinateTransform(sourceCrs, destCrs, QgsProject.instance())
+                        # sourceCrs = QgsCoordinateReferenceSystem(4326)
+                        # destCrs = QgsCoordinateReferenceSystem(2180)
+                        # tran = QgsCoordinateTransform(sourceCrs, destCrs, QgsProject.instance())
                         geom.transform(tran)
                         feat.setGeometry(geom)
                     feat_zs.append(feat)
@@ -329,9 +341,9 @@ class ImportDanych(QgsProcessingAlgorithm):
                     else:
                         geom = (QgsGeometry(QgsPoint(float(feat['longitude']), float(feat['latitude']))))
                         # bez dublowania def tran - z poziomu algorytmu nie konwertowaly sie dane
-                        sourceCrs = QgsCoordinateReferenceSystem(4326)
-                        destCrs = QgsCoordinateReferenceSystem(2180)
-                        tran = QgsCoordinateTransform(sourceCrs, destCrs, QgsProject.instance())
+                        # sourceCrs = QgsCoordinateReferenceSystem(4326)
+                        # destCrs = QgsCoordinateReferenceSystem(2180)
+                        # tran = QgsCoordinateTransform(sourceCrs, destCrs, QgsProject.instance())
                         geom.transform(tran)
                         feat.setGeometry(geom)
                     feat_pl.append(feat)
@@ -561,6 +573,9 @@ class ImportDanych(QgsProcessingAlgorithm):
              PARAMETRY
              Należy wskazać plik CSV z SIIS.
              Folder gdzie ma być zapisana geopaczka z zaimportowanymi danymi.
+             Odwzorowanie pierwotne - układ w jakim są dane w CSV z SIIS (domyślnie WGS 84)
+             Odwzorowanie DOCELOWE - układ w jakim mają być zapisane dane geometryczne (współrzędne w kolumnach zawsze są zapisywane w WGS84)
+
              
              Są to dane z geometriami (takie jak w eksporcie z PIT) jak i rekordy bez geometrii.
              Narzędzie uzupełnia geometrię dla obiektów punktowych i liniowcyh  bazujących na innych obiektach z 

@@ -30,6 +30,7 @@ __copyright__ = '(C) 2023 by Tomasz Mazuga'
 
 __revision__ = '$Format:%H$'
 
+import copy
 import inspect
 import time
 
@@ -38,7 +39,7 @@ from qgis.core import (QgsCoordinateReferenceSystem, QgsCoordinateTransform,
                        QgsProcessing, QgsProcessingAlgorithm,
                        QgsProcessingParameterFeatureSink,
                        QgsProcessingParameterFeatureSource,
-                       QgsProcessingParameterNumber, QgsVectorLayer)
+                       QgsProcessingParameterNumber, QgsVectorLayer, QgsProcessingParameterCrs, QgsProject)
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtGui import QColor, QIcon
 
@@ -69,6 +70,7 @@ class DaneAdresowe(QgsProcessingAlgorithm):
     INPUT_PUNKTY_LACZENIA = 'INPUT_PUNKTY_LACZENIA'
     INPUT_PUNKTY_ZAKONCZENIA = 'INPUT_PUNKTY_ZAKONCZENIA'
     INPUT_LICZBA_OBIEKTOW = 'INPUT_LICZBA_OBIEKTOW'
+    CRS = 'CRS'
 
     def initAlgorithm(self, config):
         """
@@ -88,6 +90,12 @@ class DaneAdresowe(QgsProcessingAlgorithm):
                 minValue=1,
                 maxValue=300
                 ))
+
+        self.addParameter(
+            QgsProcessingParameterCrs(
+                name=self.CRS,
+                description=self.tr('Wybierz odwzorowanie docelowe (domyślnie układ aktywnego projektu)'), defaultValue=QgsProject.instance().crs().authid()
+            ))
 
         self.addParameter(
             QgsProcessingParameterFeatureSource(
@@ -121,6 +129,8 @@ class DaneAdresowe(QgsProcessingAlgorithm):
             )
             )
 
+
+
     def processAlgorithm(self, parameters, context, feedback):
         """
         Here is where the processing itself takes place.
@@ -151,6 +161,12 @@ class DaneAdresowe(QgsProcessingAlgorithm):
             parameters,
             self.INPUT_LICZBA_OBIEKTOW,
             context))
+
+        crs_layer = self.parameterAsCrs(
+            parameters,
+            self.CRS,
+            context)
+
         source_pkt_ww = self.parameterAsSource(parameters, self.INPUT_WEZLY, context)
         source_pkt_wo = self.parameterAsSource(parameters, self.INPUT_WEZLY_OBCE, context)
         source_pkt_lk = self.parameterAsSource(parameters, self.INPUT_PUNKTY_LACZENIA, context)
@@ -175,9 +191,12 @@ class DaneAdresowe(QgsProcessingAlgorithm):
         current = 0
 
         # zlozenie transformacji z 2180 -> 4326
-        sourceCrs = QgsCoordinateReferenceSystem(2180)
-        destCrs = QgsCoordinateReferenceSystem(4326)
+        sourceCrs = QgsCoordinateReferenceSystem('EPSG:2180')
+        destCrs = QgsCoordinateReferenceSystem(crs_layer)
         tran = QgsCoordinateTransform(sourceCrs, destCrs, QgsProject.instance())
+        sourceCrs4326 = QgsCoordinateReferenceSystem('EPSG:4326')
+        tran_4326 = QgsCoordinateTransform(destCrs, sourceCrs4326, QgsProject.instance())
+
 
         opracowywane_warstwy = [
             {'warstwa': 'wezly', 'miasto': 'city_name', 'ulica': 'street_name', 'numer': 'we07_nr_porzadkowy',
@@ -201,7 +220,7 @@ class DaneAdresowe(QgsProcessingAlgorithm):
             latitude_idx = _field_index(layer, point_layer['latitude'])
             longitude_idx = _field_index(layer, point_layer['longitude'])
             for feature in layer_obiekty_do_przetworzenia:
-                if current <= liczba_ob_do_geokod:
+                if current < liczba_ob_do_geokod:
                     pass
                 else:
                     continue
@@ -218,8 +237,9 @@ class DaneAdresowe(QgsProcessingAlgorithm):
                         current += 1
                         feedback.setProgress(int(current * total))
                     else:
-                        layer.dataProvider().changeGeometryValues({feature.id(): geom})
                         geom.transform(tran)
+                        layer.dataProvider().changeGeometryValues({feature.id(): geom})
+                        geom.transform(tran_4326)
                         x = geom.get().x()
                         y = geom.get().y()
                         attrs = {longitude_idx: f'{y:.5f}', latitude_idx: f'{x:.5f}', flag_idx: f'1'}
@@ -284,6 +304,9 @@ class DaneAdresowe(QgsProcessingAlgorithm):
              PARAMETRY
              Liczba obiektów do geokodowania - wyznacza ile obiektów będzie mogło być geokodowanych w 1 "obiegu"
              algorytmu.
+             Odwzorowanie docelowe - układ zapisu danych geometrycznych. Domyślnie układ projektu. 
+             Współrzędne X/Y zapisują się w układzie WGS 84.
+             Dane w GUGiK są przechowywane w układzie 2180.
              Warstwy - zaczytują się automatycznie.
              
              Geokodowane są 4 warstwy, jeden "obieg" algorytmu geokoduje 1 - 300 obiektów w kolejności listy warstwy w 
@@ -293,7 +316,7 @@ class DaneAdresowe(QgsProcessingAlgorithm):
              
              Pomijane są adresy bez numerów  lub z numerami równymi 0.
              Aktualizowana jest geometria.
-             Wpisywane są  dł/szer w ukłądzie WGS84.
+             Wpisywane są  dł/szer w układzie WGS84.
              Uzupełnione elementy otrzymują  wartość w atrybucie flag = 1 (inne domyślnie mają tam 0)
              Obiekty z 0, które nie zostały zgeokodowane otrzymują flag = 2
              
