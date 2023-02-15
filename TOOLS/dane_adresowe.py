@@ -277,7 +277,7 @@ class DaneAdresowe(QgsProcessingAlgorithm):
              Algorytm geokoduje obiekty z wybranych warstw.
              
              Geokodowanie wykonywane jest za pomocą usługi UUG Uniwersalna Usługa Geokodowania udostępnianej przez 
-             GIGiK 
+             GUGiK 
              www.gov.pl/web/gugik
              http://services.gugik.gov.pl/uug
              
