@@ -1,13 +1,17 @@
 import requests
 from qgis.core import QgsGeometry
 
+
 def geokodowanie_adresu(miejscowosc: str, ulica: str, numer:str , kod:str ) -> QgsGeometry:
     headers = {'Accept': 'application/json'}
     if miejscowosc is False or miejscowosc == '':
+        # TODO do przemyśleniea, zamiana QgsGeometry na QgsFeature, pozwoli to łatwo przenosić atrybuty do aktualizacji
+        #  danych
         return QgsGeometry()
     elif numer is False or numer == '0' or numer == '':
         return QgsGeometry()
     elif ulica == 'BRAK ULICY' or ulica is False or ulica == '':
+        # TODO poprawić requesty, zastąpić  f-str
         zap = f'https://services.gugik.gov.pl/uug/?request=GetAddress&address={miejscowosc},%20{numer}'
     else:
         zap = f'https://services.gugik.gov.pl/uug/?request=GetAddress&address={miejscowosc},%20{ulica}%20{numer}'

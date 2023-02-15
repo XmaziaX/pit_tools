@@ -30,18 +30,18 @@ __copyright__ = '(C) 2023 by Tomasz Mazuga'
 
 __revision__ = '$Format:%H$'
 
-from qgis.PyQt.QtCore import QCoreApplication
-from qgis.core import (QgsProcessing,
-                       QgsFeatureSink,
-                       QgsProcessingAlgorithm,
-                       QgsProcessingParameterFeatureSource,
-                       QgsProcessingParameterFeatureSink, QgsCoordinateReferenceSystem, QgsCoordinateTransform,
-                       QgsGeometry, QgsMessageLog, QgsProcessingParameterNumber, QgsVectorLayer)
-from qgis.PyQt.QtGui import QIcon, QColor
-import os
 import inspect
-import requests
 import time
+
+from qgis.core import (QgsCoordinateReferenceSystem, QgsCoordinateTransform,
+                       QgsFeatureSink, QgsGeometry, QgsMessageLog,
+                       QgsProcessing, QgsProcessingAlgorithm,
+                       QgsProcessingParameterFeatureSink,
+                       QgsProcessingParameterFeatureSource,
+                       QgsProcessingParameterNumber, QgsVectorLayer)
+from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtGui import QColor, QIcon
+
 from .funkcje import *
 from .geokodowanie_gugik import geokodowanie_adresu
 
@@ -275,6 +275,11 @@ class DaneAdresowe(QgsProcessingAlgorithm):
             parameters and outputs associated with it.."""
         return self.tr(("""
              Algorytm geokoduje obiekty z wybranych warstw.
+             
+             Geokodowanie wykonywane jest za pomocą usługi UUG Uniwersalna Usługa Geokodowania udostępnianej przez 
+             GIGiK 
+             www.gov.pl/web/gugik
+             http://services.gugik.gov.pl/uug
              
              PARAMETRY
              Liczba obiektów do geokodowania - wyznacza ile obiektów będzie mogło być geokodowanych w 1 "obiegu"

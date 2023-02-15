@@ -30,15 +30,15 @@ __copyright__ = '(C) 2023 by Tomasz Mazuga'
 
 __revision__ = '$Format:%H$'
 
-from qgis.PyQt.QtCore import QCoreApplication
-from qgis.core import (QgsProcessing,
-                       QgsFeatureSink,
-                       QgsProcessingAlgorithm,
-                       QgsProcessingParameterFeatureSource,
-                       QgsProcessingParameterFeatureSink, QgsGeometry, QgsMessageLog)
-from qgis.PyQt.QtGui import QIcon, QColor
-import os
 import inspect
+
+from qgis.core import (QgsFeatureSink, QgsGeometry, QgsMessageLog,
+                       QgsProcessing, QgsProcessingAlgorithm,
+                       QgsProcessingParameterFeatureSink,
+                       QgsProcessingParameterFeatureSource)
+from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtGui import QColor, QIcon
+
 from .funkcje import *
 
 

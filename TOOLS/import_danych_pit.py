@@ -30,24 +30,21 @@ __copyright__ = '(C) 2023 by Tomasz Mazuga'
 
 __revision__ = '$Format:%H$'
 
-from qgis.PyQt.QtCore import QCoreApplication
-from qgis.core import (QgsProcessing,
-                       QgsFeatureSink,
-                       QgsProcessingAlgorithm,
-                       QgsProcessingParameterFeatureSource,
-                       QgsProcessingParameterFeatureSink,
-                       QgsProcessingParameterFile,
-                       QgsCoordinateReferenceSystem,
-                       QgsCoordinateTransform,
-                       QgsProject,
-                       QgsGeometry,
-                       QgsPoint, QgsProcessingParameterCrs, QgsMessageLog
-                        )
-from qgis.PyQt.QtGui import QIcon, QColor
-from .funkcje import *
-import os
-import inspect
 import csv
+import inspect
+import os
+
+from qgis.core import (QgsCoordinateReferenceSystem, QgsCoordinateTransform,
+                       QgsFeatureSink, QgsGeometry, QgsMessageLog, QgsPoint,
+                       QgsProcessing, QgsProcessingAlgorithm,
+                       QgsProcessingParameterCrs,
+                       QgsProcessingParameterFeatureSink,
+                       QgsProcessingParameterFeatureSource,
+                       QgsProcessingParameterFile, QgsProject)
+from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtGui import QColor, QIcon
+
+from .funkcje import *
 
 
 class ImportDanych(QgsProcessingAlgorithm):
